@@ -1,0 +1,19 @@
+[package]
+name = "pollen-api"
+version = "0.1.0"
+edition = "2024"
+authors = ["Allan Kimmer Jensen <hi@akj.io>"]
+license = "MIT"
+description = "Clean REST API relay for Nordic pollen data"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.13", features = ["json"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"

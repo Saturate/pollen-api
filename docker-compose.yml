@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  pollen-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: pollen-api
+    ports:
+      - "3060:3060"
+    restart: unless-stopped
+    environment:
+      - RUST_LOG=info

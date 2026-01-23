@@ -1,0 +1,6 @@
+   0.142894583s  INFO prepare_target{force=false package_id=pollen-api v0.1.0 (/Users/alkj/code/PollenAPI/api) target="pollen-api"}: cargo::core::compiler::fingerprint: fingerprint dirty for pollen-api v0.1.0 (/Users/alkj/code/PollenAPI/api)/Check { test: false }/TargetInner { name: "pollen-api", doc: true, ..: with_path("/Users/alkj/code/PollenAPI/api/src/main.rs", Edition2024) }
+   0.142914750s  INFO prepare_target{force=false package_id=pollen-api v0.1.0 (/Users/alkj/code/PollenAPI/api) target="pollen-api"}: cargo::core::compiler::fingerprint:     dirty: TargetConfigurationChanged
+   0.167397708s  INFO prepare_target{force=false package_id=pollen-api v0.1.0 (/Users/alkj/code/PollenAPI/api) target="pollen-api"}: cargo::core::compiler::fingerprint: fingerprint dirty for pollen-api v0.1.0 (/Users/alkj/code/PollenAPI/api)/Check { test: true }/TargetInner { name: "pollen-api", doc: true, ..: with_path("/Users/alkj/code/PollenAPI/api/src/main.rs", Edition2024) }
+   0.167411208s  INFO prepare_target{force=false package_id=pollen-api v0.1.0 (/Users/alkj/code/PollenAPI/api) target="pollen-api"}: cargo::core::compiler::fingerprint:     dirty: TargetConfigurationChanged
+    Checking pollen-api v0.1.0 (/Users/alkj/code/PollenAPI/api)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.32s
