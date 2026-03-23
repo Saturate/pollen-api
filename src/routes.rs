@@ -55,7 +55,14 @@ pub type SharedCache = Arc<RwLock<Cache>>;
 )]
 struct ApiDoc;
 
+fn build_openapi_spec() -> utoipa::openapi::OpenApi {
+    let mut spec = ApiDoc::openapi();
+    spec.info.version = env!("CARGO_PKG_VERSION").to_string();
+    spec
+}
+
 pub fn create_router(cache: SharedCache) -> Router {
+    let spec = build_openapi_spec();
     Router::new()
         .route("/", get(api_info))
         .route("/health", get(health))
@@ -64,7 +71,7 @@ pub fn create_router(cache: SharedCache) -> Router {
         .route("/v1/{country}/pollen-types", get(list_pollen_types))
         .route("/v1/{country}/{region}/forecast", get(get_forecast))
         .route("/openapi.json", get(openapi_spec))
-        .merge(Scalar::with_url("/docs", ApiDoc::openapi()))
+        .merge(Scalar::with_url("/docs", spec))
         .with_state(cache)
 }
 
@@ -91,7 +98,7 @@ struct ApiInfo {
 async fn api_info() -> Json<ApiInfo> {
     Json(ApiInfo {
         name: "Pollen API Relay".to_string(),
-        version: "0.2.0".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
         countries: vec!["dk".to_string()],
         languages: vec!["en".to_string(), "da".to_string()],
         docs: "/docs".to_string(),
@@ -102,7 +109,7 @@ async fn api_info() -> Json<ApiInfo> {
 }
 
 async fn openapi_spec() -> Json<utoipa::openapi::OpenApi> {
-    Json(ApiDoc::openapi())
+    Json(build_openapi_spec())
 }
 
 const POLL_INTERVAL_SECONDS: i64 = 7200;
