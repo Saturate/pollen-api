@@ -23,7 +23,7 @@ pub type SharedCache = Arc<RwLock<Cache>>;
     info(
         title = "Pollen API",
         description = "Clean REST API relay for Nordic pollen data. Data sourced from astma-allergi.dk and served with caching, filtering, and multilingual support.",
-        version = "0.1.0",
+        version = "0.2.0",
         license(name = "MIT"),
         contact(name = "Allan Kimmer Jensen", email = "hi@akj.io")
     ),
@@ -91,7 +91,7 @@ struct ApiInfo {
 async fn api_info() -> Json<ApiInfo> {
     Json(ApiInfo {
         name: "Pollen API Relay".to_string(),
-        version: "0.1.0".to_string(),
+        version: "0.2.0".to_string(),
         countries: vec!["dk".to_string()],
         languages: vec!["en".to_string(), "da".to_string()],
         docs: "/docs".to_string(),

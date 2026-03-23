@@ -2,7 +2,7 @@
 FROM rust:1.85-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache musl-dev
+RUN apk add --no-cache musl-dev cmake make perl gcc g++
 
 # Create a new empty project
 WORKDIR /app
