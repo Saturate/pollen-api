@@ -1,4 +1,5 @@
 mod cache;
+mod errors;
 mod models;
 mod pollen_types;
 mod poller;

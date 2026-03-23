@@ -76,3 +76,64 @@ pub fn get_pollen_name(canonical_id: &str, lang: &str) -> Option<String> {
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pollen_types_returns_all_8() {
+        assert_eq!(get_pollen_types().len(), 8);
+    }
+
+    #[test]
+    fn denmark_id_maps_all_known_ids() {
+        let expected = [
+            ("1", "alder"),
+            ("2", "hazel"),
+            ("4", "elm"),
+            ("7", "birch"),
+            ("28", "grass"),
+            ("31", "mugwort"),
+            ("44", "alternaria"),
+            ("45", "cladosporium"),
+        ];
+        for (id, canonical) in &expected {
+            assert_eq!(
+                denmark_id_to_canonical(id).as_deref(),
+                Some(*canonical),
+                "mapping failed for id {}",
+                id
+            );
+        }
+    }
+
+    #[test]
+    fn denmark_id_unknown_returns_none() {
+        assert_eq!(denmark_id_to_canonical("999"), None);
+        assert_eq!(denmark_id_to_canonical(""), None);
+        assert_eq!(denmark_id_to_canonical("alder"), None);
+    }
+
+    #[test]
+    fn pollen_name_english() {
+        assert_eq!(get_pollen_name("grass", "en"), Some("Grass".to_string()));
+        assert_eq!(get_pollen_name("birch", "en"), Some("Birch".to_string()));
+    }
+
+    #[test]
+    fn pollen_name_danish() {
+        assert_eq!(get_pollen_name("grass", "da"), Some("Græs".to_string()));
+        assert_eq!(get_pollen_name("birch", "da"), Some("Birk".to_string()));
+    }
+
+    #[test]
+    fn pollen_name_unknown_lang_falls_back_to_english() {
+        assert_eq!(get_pollen_name("grass", "de"), Some("Grass".to_string()));
+    }
+
+    #[test]
+    fn pollen_name_unknown_id_returns_none() {
+        assert_eq!(get_pollen_name("oak", "en"), None);
+    }
+}

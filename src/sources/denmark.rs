@@ -6,36 +6,36 @@ use crate::pollen_types;
 const DANISH_API_URL: &str = "https://www.astma-allergi.dk/umbraco/Api/PollenApi/GetPollenFeed";
 
 #[derive(Debug, Deserialize)]
-pub struct FirestoreDocument {
-    pub fields: HashMap<String, FirestoreValue>,
+pub struct PollenFeedResponse {
+    pub fields: HashMap<String, PollenFeedValue>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FirestoreValue {
-    pub map_value: Option<FirestoreMap>,
+pub struct PollenFeedValue {
+    pub map_value: Option<PollenFeedMap>,
     pub string_value: Option<String>,
     pub integer_value: Option<String>,
     pub boolean_value: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct FirestoreMap {
-    pub fields: HashMap<String, FirestoreValue>,
+pub struct PollenFeedMap {
+    pub fields: HashMap<String, PollenFeedValue>,
 }
 
-pub async fn fetch() -> Result<FirestoreDocument> {
+pub async fn fetch() -> Result<PollenFeedResponse> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .build()?;
 
     let response = client.get(DANISH_API_URL).send().await?;
     let json_string: String = response.json().await?;
-    let document: FirestoreDocument = serde_json::from_str(&json_string)?;
+    let document: PollenFeedResponse = serde_json::from_str(&json_string)?;
     Ok(document)
 }
 
-pub fn transform(raw: FirestoreDocument) -> Vec<crate::models::PollenForecast> {
+pub fn transform(raw: PollenFeedResponse) -> Vec<crate::models::PollenForecast> {
     let mut forecasts = Vec::new();
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
 
@@ -102,11 +102,164 @@ pub fn transform(raw: FirestoreDocument) -> Vec<crate::models::PollenForecast> {
     forecasts
 }
 
-fn convert_danish_date(danish_date: &str) -> String {
+pub(crate) fn convert_danish_date(danish_date: &str) -> String {
     let parts: Vec<&str> = danish_date.split('-').collect();
     if parts.len() == 3 {
         format!("{}-{}-{}", parts[2], parts[1], parts[0])
     } else {
         danish_date.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn convert_danish_date_valid() {
+        assert_eq!(convert_danish_date("22-03-2026"), "2026-03-22");
+        assert_eq!(convert_danish_date("01-12-2025"), "2025-12-01");
+    }
+
+    #[test]
+    fn convert_danish_date_malformed_returns_input() {
+        assert_eq!(convert_danish_date("2026-03-22"), "22-03-2026");
+        assert_eq!(convert_danish_date("garbage"), "garbage");
+        assert_eq!(convert_danish_date(""), "");
+    }
+
+    fn make_integer_value(val: &str) -> PollenFeedValue {
+        PollenFeedValue {
+            map_value: None,
+            string_value: None,
+            integer_value: Some(val.to_string()),
+            boolean_value: None,
+        }
+    }
+
+    fn make_string_value(val: &str) -> PollenFeedValue {
+        PollenFeedValue {
+            map_value: None,
+            string_value: Some(val.to_string()),
+            integer_value: None,
+            boolean_value: None,
+        }
+    }
+
+    fn make_map_value(fields: HashMap<String, PollenFeedValue>) -> PollenFeedValue {
+        PollenFeedValue {
+            map_value: Some(PollenFeedMap { fields }),
+            string_value: None,
+            integer_value: None,
+            boolean_value: None,
+        }
+    }
+
+    fn build_pollen_entry(level: &str) -> PollenFeedValue {
+        let pollen_fields = HashMap::from([
+            ("level".to_string(), make_integer_value(level)),
+        ]);
+        make_map_value(pollen_fields)
+    }
+
+    fn build_pollen_entry_with_prediction(level: &str, pred_date: &str, pred_level: &str) -> PollenFeedValue {
+        let prediction_inner = HashMap::from([
+            ("prediction".to_string(), make_string_value(pred_level)),
+        ]);
+        let predictions = HashMap::from([
+            (pred_date.to_string(), make_map_value(prediction_inner)),
+        ]);
+        let pollen_fields = HashMap::from([
+            ("level".to_string(), make_integer_value(level)),
+            ("predictions".to_string(), make_map_value(predictions)),
+        ]);
+        make_map_value(pollen_fields)
+    }
+
+    #[test]
+    fn transform_basic_level() {
+        // pollen id "7" = birch
+        let data_fields = HashMap::from([
+            ("7".to_string(), build_pollen_entry("3")),
+        ]);
+        let region_fields = HashMap::from([
+            ("data".to_string(), make_map_value(data_fields)),
+        ]);
+        let raw = PollenFeedResponse {
+            fields: HashMap::from([
+                ("48".to_string(), make_map_value(region_fields)),
+            ]),
+        };
+
+        let forecasts = transform(raw);
+        assert_eq!(forecasts.len(), 1);
+        assert_eq!(forecasts[0].region, "48");
+        assert_eq!(forecasts[0].pollen_type, "birch");
+        assert_eq!(forecasts[0].level, 3);
+        assert!(!forecasts[0].is_forecast);
+    }
+
+    #[test]
+    fn transform_normalizes_negative_one_to_zero() {
+        let data_fields = HashMap::from([
+            ("28".to_string(), build_pollen_entry("-1")),
+        ]);
+        let region_fields = HashMap::from([
+            ("data".to_string(), make_map_value(data_fields)),
+        ]);
+        let raw = PollenFeedResponse {
+            fields: HashMap::from([
+                ("49".to_string(), make_map_value(region_fields)),
+            ]),
+        };
+
+        let forecasts = transform(raw);
+        assert_eq!(forecasts.len(), 1);
+        assert_eq!(forecasts[0].level, 0);
+        assert_eq!(forecasts[0].pollen_type, "grass");
+    }
+
+    #[test]
+    fn transform_skips_unknown_pollen_ids() {
+        let data_fields = HashMap::from([
+            ("999".to_string(), build_pollen_entry("2")),
+        ]);
+        let region_fields = HashMap::from([
+            ("data".to_string(), make_map_value(data_fields)),
+        ]);
+        let raw = PollenFeedResponse {
+            fields: HashMap::from([
+                ("48".to_string(), make_map_value(region_fields)),
+            ]),
+        };
+
+        let forecasts = transform(raw);
+        assert!(forecasts.is_empty());
+    }
+
+    #[test]
+    fn transform_includes_predictions_as_forecasts() {
+        let data_fields = HashMap::from([
+            ("1".to_string(), build_pollen_entry_with_prediction("2", "24-03-2026", "4")),
+        ]);
+        let region_fields = HashMap::from([
+            ("data".to_string(), make_map_value(data_fields)),
+        ]);
+        let raw = PollenFeedResponse {
+            fields: HashMap::from([
+                ("48".to_string(), make_map_value(region_fields)),
+            ]),
+        };
+
+        let forecasts = transform(raw);
+        assert_eq!(forecasts.len(), 2);
+
+        let current = forecasts.iter().find(|f| !f.is_forecast).unwrap();
+        assert_eq!(current.level, 2);
+        assert_eq!(current.pollen_type, "alder");
+
+        let prediction = forecasts.iter().find(|f| f.is_forecast).unwrap();
+        assert_eq!(prediction.level, 4);
+        assert_eq!(prediction.date, "2026-03-24");
     }
 }
