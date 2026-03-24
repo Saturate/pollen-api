@@ -1,10 +1,6 @@
-version: '3.8'
-
 services:
   pollen-api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
+    image: ghcr.io/saturate/pollen-api:latest
     container_name: pollen-api
     ports:
       - "3060:3060"
